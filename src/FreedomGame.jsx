@@ -41,6 +41,8 @@ const FreedomGame = () => {
   const [customBeliefText, setCustomBeliefText] = useState('');
   const [customBeliefCategory, setCustomBeliefCategory] = useState('proven');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [tooltip, setTooltip] = useState(null); // { key, x, y }
+  const tooltipRef = useRef(null);
 
   const animationRef = useRef(null);
   const physicsFrameCounter = useRef(0);
@@ -55,7 +57,6 @@ const FreedomGame = () => {
 
   const width = CANVAS_WIDTH;
   const height = CANVAS_HEIGHT;
-
 
   const getSvgCoordinates = (e, svg) => {
     const rect = svg.getBoundingClientRect();
@@ -117,6 +118,17 @@ const FreedomGame = () => {
     lockedClustersRef.current = lockedClusters;
   }, [lockedClusters]);
 
+  useEffect(() => {
+    if (!tooltip) return;
+    const handleOutsideClick = (e) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target)) {
+        setTooltip(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [tooltip]);
+
   const startGame = () => {
     setGameState('playing');
     setBeliefs([]);
@@ -127,8 +139,14 @@ const FreedomGame = () => {
   };
 
   const addRandomBelief = () => {
-    const belief =
-      beliefOptions[Math.floor(Math.random() * beliefOptions.length)];
+    const available = beliefOptions.filter(
+      (b) =>
+        !beliefsRef.current.some(
+          (existing) => existing.text.toLowerCase() === b.text.toLowerCase(),
+        ),
+    );
+    if (available.length === 0) return;
+    const belief = available[Math.floor(Math.random() * available.length)];
     addBeliefToGame(belief.text, belief.category);
   };
 
@@ -1068,7 +1086,7 @@ const FreedomGame = () => {
                 </div>
 
                 {/* Belief Categories */}
-                <div style={{ ...cardStyle, padding: '12px 16px' }}>
+                <div style={{ ...cardStyle, padding: '12px 16px', position: 'relative' }}>
                   <h3
                     style={{
                       margin: '0 0 8px 0',
@@ -1089,10 +1107,22 @@ const FreedomGame = () => {
                       ([key, { color, label }]) => (
                         <div
                           key={key}
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setTooltip(
+                              tooltip?.key === key
+                                ? null
+                                : { key, x: rect.left, y: rect.bottom + 6 },
+                            );
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                            padding: '2px 4px',
+                            background: tooltip?.key === key ? '#f3f4f6' : 'transparent',
                           }}
                         >
                           <div
@@ -1112,11 +1142,54 @@ const FreedomGame = () => {
                           >
                             {label}
                           </span>
+                          <span style={{ marginLeft: 'auto', fontSize: '0.7em', color: colors.textMuted }}>ⓘ</span>
                         </div>
                       ),
                     )}
                   </div>
                 </div>
+
+                {/* Category tooltip */}
+                {tooltip && (
+                  <div
+                    ref={tooltipRef}
+                    style={{
+                      position: 'fixed',
+                      top: Math.min(tooltip.y, window.innerHeight - 160),
+                      left: Math.min(tooltip.x, window.innerWidth - 260),
+                      width: '240px',
+                      background: 'white',
+                      borderRadius: '10px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+                      padding: '12px 14px',
+                      zIndex: 1000,
+                      border: `2px solid ${categories[tooltip.key].color}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontWeight: '700', fontSize: '0.9em', color: categories[tooltip.key].color }}>
+                        {categories[tooltip.key].label}
+                      </span>
+                      <button
+                        onClick={() => setTooltip(null)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '1em',
+                          color: colors.textMuted,
+                          lineHeight: 1,
+                          padding: '0 2px',
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.82em', color: colors.textBody, lineHeight: '1.5' }}>
+                      {categories[tooltip.key].description}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
