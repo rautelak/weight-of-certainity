@@ -9,7 +9,6 @@ import { generateBeliefSummary } from './beliefSummary';
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
-  getCanvasSizes,
   colors,
   getFreedomColor,
   cardStyle,
