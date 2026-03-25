@@ -89,9 +89,9 @@ const FreedomGame = () => {
       const isTyping = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
       keysRef.current[e.key] = true;
 
-      if (e.key === ' ') {
+      if (e.key === ' ' && !isTyping) {
         e.preventDefault();
-        if (gameState === 'playing' && !isTyping) {
+        if (gameState === 'playing') {
           addRandomBelief();
         }
       }
